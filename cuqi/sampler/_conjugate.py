@@ -34,12 +34,12 @@ class Conjugate: # TODO: Subclass from Sampler once updated
             
         if (isinstance(target.likelihood.distribution, (RegularizedGaussian, RegularizedGMRF)) and
             not isinstance(target.likelihood.distribution, (RegularizedUniform)) and
-            target.likelihood.distribution.preset["constraint"] not in ["nonnegativity"] and
+            target.likelihood.distribution.preset["constraint"] not in ["nonnegativity","box","simplex","l1","l2"] and
             target.likelihood.distribution.preset["regularization"] not in ["l1", "TV"]):
                 raise ValueError("Conjugate sampler does not support the constraint and/or regularization options.")
         if (isinstance(target.likelihood.distribution, (RegularizedUniform)) and
             target.likelihood.distribution.preset["regularization"] not in ["l1", "TV"] and
-            target.likelihood.distribution.preset["constraint"] not in [None, "nonnegativity"]):
+            target.likelihood.distribution.preset["constraint"] not in [None, "nonnegativity","box","simplex","l1","l2"]):
                 raise ValueError("Conjugate sampler does not support the constraint and/or regularization options.")
         
         self.target = target
@@ -80,7 +80,10 @@ class Conjugate: # TODO: Subclass from Sampler once updated
 
         # Extract variables
         b = self.target.likelihood.data                                 #mu
-        m = self._calc_m_for_RegularizedGaussians(b)                    #n
+        if self.target.likelihood.distribution.simplified_sparsity_level:
+            m = len(b)
+        else:
+            m = self._calc_m_for_RegularizedGaussians(b, self.target.likelihood.distribution.optional_regularization_parameters) 
         Ax = self.target.likelihood.distribution.mean                   #x_i
         likelihood = self.target.likelihood.distribution(np.array([1]))
         L = likelihood.sqrtprec                                         #L
@@ -112,7 +115,10 @@ class Conjugate: # TODO: Subclass from Sampler once updated
 
         # Extract variables
         b = self.target.likelihood.data                                 #mu
-        m = self._calc_m_for_RegularizedGaussians(b)                    #n
+        if self.target.likelihood.distribution.simplified_sparsity_level:
+            m = len(b)
+        else:
+            m = self._calc_m_for_RegularizedGaussians(b, self.target.likelihood.distribution.optional_regularization_parameters) 
         Ax = self.target.likelihood.distribution.mean                   #x_i
         likelihood = self.target.likelihood.distribution(np.array([1]))
         L = likelihood.sqrtprec                                         #L
@@ -144,7 +150,7 @@ class Conjugate: # TODO: Subclass from Sampler once updated
 
         return dist.sample()
 
-    def _calc_m_for_RegularizedGaussians(self, b):
+    def _calc_m_for_RegularizedGaussians(self, b, params = None):
         """ Helper method to calculate m parameter for Gaussian-Gamma conjugate pair. """
         if isinstance(self.target.likelihood.distribution, (RegularizedGaussian, RegularizedGMRF)):
             threshold = 1e-6 # TODO: This could become a property of the class after the Conjugacy rework
@@ -155,6 +161,20 @@ class Conjugate: # TODO: Subclass from Sampler once updated
             if preset_constraint == "nonnegativity" and preset_regularization is None:
                 return np.count_nonzero(b) # Counting strict zeros, due to the solver used by RegularizedLinearRTO introducing actual zeros.
             
+            if preset_constraint == "box" and preset_regularization is None:
+                return len(b) - len(b[b == params["lower_bound"]]) - len(b[b == params["upper_bound"]])
+
+            if preset_constraint == "simplex" and preset_regularization is None:
+                return np.count_nonzero(b) - 1 # Counting strict zeros, due to the solver used by RegularizedLinearRTO introducing actual zeros.
+                        
+            if preset_constraint == "l1" and preset_regularization is None:
+                return len(b) if np.linalg.norm(b, ord = 1) < params["radius"]-1e-6 else (np.count_nonzero(b) - 1)
+            
+            if preset_constraint == "l2" and preset_regularization is None:
+                return len(b) - (1 if np.linalg.norm(b, ord = 2) >= params["radius"] else 0)
+
+
+
             if ((preset_constraint is None and preset_regularization == "l1") or
                 (preset_constraint == "nonnegativity" and preset_regularization == "l1")):
                 return Conjugate._count_weak_nonzero(b, threshold = threshold)
@@ -174,6 +194,15 @@ class Conjugate: # TODO: Subclass from Sampler once updated
                     return Conjugate._count_weak_components_2d(b, threshold = threshold, lower = 0.0)
                 else:
                     raise ValueError("Geometry not supported.")
+                
+            if preset_constraint == "box" and preset_regularization == "TV":
+                if isinstance(self.target.geometry, (Continuous1D)):
+                    return Conjugate._count_weak_components_1D(b, threshold = threshold, lower = params["lower_bound"], upper = params["upper_bound"])
+                elif isinstance(self.target.geometry, (Continuous2D, Image2D)):
+                    return Conjugate._count_weak_components_2d(b, threshold = threshold, lower = params["lower_bound"], upper = params["upper_bound"])
+                else:
+                    raise ValueError("Geometry not supported.")
+                
             
         raise Exception("Conjugacy pair not supported, although initial guards accepted it.")
     

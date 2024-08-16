@@ -11,5 +11,8 @@ from ._solver import (
     ProjectNonnegative,
     ProjectBox,
     ProjectHalfspace,
-    ProximalL1
+    ProximalL1,
+    ProjectL1Ball,
+    ProjectL2Ball,
+    ProjectSimplex
 )

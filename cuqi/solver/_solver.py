@@ -818,3 +818,29 @@ def ProximalL1(x, gamma):
     gamma : scale parameter.
     """
     return np.multiply(np.sign(x), np.maximum(np.abs(x)-gamma, 0))
+    
+def ProjectL2Ball(x, radius = 1):
+    norm = np.linalg.norm(x)
+    if norm <= radius:
+        return x
+    return radius*x/norm
+
+def ProjectSimplex(x, radius = 1):
+    ''' Condat, Fast projection onto the simplex and the l1 ball
+        worst case O(n^2), average case O(nlogn)
+        Technically not the faster algorithm, but the simplest
+    '''
+    u = np.flip(np.sort(x)) # worst case: O(n^2), average case: O(nlogn)
+    K = len(x)-1
+    accum = np.sum(u)
+    while (accum - radius)/(K+1) >= u[K] and K > 0:
+        accum -= u[K]
+        K -= 1
+    tau = (accum - radius)/(K+1)
+    return np.maximum(x-tau, 0)
+
+def ProjectL1Ball(x, radius = 1):
+    if np.sum(np.abs(x)) <= radius:
+        return x
+    y = ProjectSimplex(np.abs(x), radius = radius)
+    return np.multiply(np.sign(x), y)

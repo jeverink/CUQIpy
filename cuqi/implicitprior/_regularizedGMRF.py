@@ -59,11 +59,13 @@ class RegularizedGMRF(RegularizedGaussian):
                 Regularization parameter, i.e., strength*||x||_TV , defaults to one
 
     """
-    def __init__(self, mean=None, prec=None, bc_type='zero', order=1, proximal = None, projector = None, constraint = None, regularization = None, force_list = False, **kwargs):
+    def __init__(self, mean=None, prec=None, bc_type='zero', order=1, proximal = None, projector = None, constraint = None, regularization = None, force_list = False, simplified_sparsity_level = False, **kwargs):
             
-        args = {"lower_bound" : kwargs.pop("lower_bound", None),
+        self.optional_regularization_parameters = {"lower_bound" : kwargs.pop("lower_bound", None),
                 "upper_bound" : kwargs.pop("upper_bound", None),
+                "radius" : kwargs.pop("radius", None),
                 "strength" : kwargs.pop("strength", None)}
+        self.simplified_sparsity_level = simplified_sparsity_level
         
         self._force_list = force_list
         
@@ -74,7 +76,7 @@ class RegularizedGMRF(RegularizedGaussian):
         # Init from abstract distribution class
         super(Distribution, self).__init__(**kwargs)
 
-        self._parse_regularization_input_arguments(proximal, projector, constraint, regularization, args)
+        self._parse_regularization_input_arguments(proximal, projector, constraint, regularization, self.optional_regularization_parameters)
 
 
 

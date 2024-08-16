@@ -1,6 +1,6 @@
 from cuqi.utilities import get_non_default_args
 from cuqi.distribution import Distribution, Gaussian
-from cuqi.solver import ProjectNonnegative, ProjectBox, ProximalL1
+from cuqi.solver import ProjectNonnegative, ProjectBox, ProximalL1, ProjectSimplex, ProjectL1Ball, ProjectL2Ball
 from cuqi.geometry import Continuous1D, Continuous2D, Image2D
 
 from cuqi.operator import FirstOrderFiniteDifference
@@ -70,14 +70,16 @@ class RegularizedGaussian(Distribution):
 
     """
         
-    def __init__(self, mean=None, cov=None, prec=None, sqrtcov=None, sqrtprec=None, proximal = None, projector = None, constraint = None, regularization = None, force_list = False, **kwargs):
+    def __init__(self, mean=None, cov=None, prec=None, sqrtcov=None, sqrtprec=None, proximal = None, projector = None, constraint = None, regularization = None, force_list = False, simplified_sparsity_level = False, **kwargs):
         
         # Store regularization parameters and remove them from kwargs passed to Gaussian
-        optional_regularization_parameters = {
+        self.optional_regularization_parameters = {
             "lower_bound" : kwargs.pop("lower_bound", None), # Takes default of ProjectBox if None
             "upper_bound" : kwargs.pop("upper_bound", None), # Takes default of ProjectBox if None
+            "radius" : kwargs.pop("radius", None),
             "strength" : kwargs.pop("strength", 1)
         }
+        self.simplified_sparsity_level = simplified_sparsity_level
         
         self._force_list = force_list
 
@@ -88,7 +90,7 @@ class RegularizedGaussian(Distribution):
         # Init from abstract distribution class
         super().__init__(**kwargs)
 
-        self._parse_regularization_input_arguments(proximal, projector, constraint, regularization, optional_regularization_parameters)
+        self._parse_regularization_input_arguments(proximal, projector, constraint, regularization, self.optional_regularization_parameters)
 
     def _parse_regularization_input_arguments(self, proximal, projector, constraint, regularization, optional_regularization_parameters):
         """ Parse regularization input arguments with guarding statements and store internal states """
@@ -149,6 +151,18 @@ class RegularizedGaussian(Distribution):
                 upper = optional_regularization_parameters["upper_bound"]
                 self._constraint_prox = lambda z, gamma: ProjectBox(z, lower, upper)
                 self._preset["constraint"] = "box"
+            elif c_lower == "simplex":
+                radius = optional_regularization_parameters["radius"]
+                self._constraint_prox = lambda z, gamma: ProjectSimplex(z, radius)
+                self._preset["constraint"] = "simplex"
+            elif c_lower == "l1":
+                radius = optional_regularization_parameters["radius"]
+                self._constraint_prox = lambda z, gamma: ProjectL1Ball(z, radius)
+                self._preset["constraint"] = "l1"
+            elif c_lower == "l2":
+                radius = optional_regularization_parameters["radius"]
+                self._constraint_prox = lambda z, gamma: ProjectL2Ball(z, radius)
+                self._preset["constraint"] = "l2"
             else:
                 raise ValueError("Constraint not supported.")
                 
@@ -248,7 +262,7 @@ class RegularizedGaussian(Distribution):
   
     @staticmethod
     def constraint_options():
-        return ["nonnegativity", "box"]
+        return ["nonnegativity", "box", "simplex", "l1", "l2"]
 
     @staticmethod
     def regularization_options():
