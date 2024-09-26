@@ -80,10 +80,7 @@ class Conjugate: # TODO: Subclass from Sampler once updated
 
         # Extract variables
         b = self.target.likelihood.data                                 #mu
-        if self.target.likelihood.distribution.simplified_sparsity_level:
-            m = len(b)
-        else:
-            m = self._calc_m_for_RegularizedGaussians(b, self.target.likelihood.distribution.optional_regularization_parameters) 
+        m = self._calc_m_for_RegularizedGaussians(b, self.target.likelihood.distribution.optional_regularization_parameters) 
         Ax = self.target.likelihood.distribution.mean                   #x_i
         likelihood = self.target.likelihood.distribution(np.array([1]))
         L = likelihood.sqrtprec                                         #L
@@ -115,10 +112,7 @@ class Conjugate: # TODO: Subclass from Sampler once updated
 
         # Extract variables
         b = self.target.likelihood.data                                 #mu
-        if self.target.likelihood.distribution.simplified_sparsity_level:
-            m = len(b)
-        else:
-            m = self._calc_m_for_RegularizedGaussians(b, self.target.likelihood.distribution.optional_regularization_parameters) 
+        m = self._calc_m_for_RegularizedGaussians(b, self.target.likelihood.distribution.optional_regularization_parameters) 
         Ax = self.target.likelihood.distribution.mean                   #x_i
         likelihood = self.target.likelihood.distribution(np.array([1]))
         L = likelihood.sqrtprec                                         #L

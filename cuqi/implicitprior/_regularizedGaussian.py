@@ -70,7 +70,7 @@ class RegularizedGaussian(Distribution):
 
     """
         
-    def __init__(self, mean=None, cov=None, prec=None, sqrtcov=None, sqrtprec=None, proximal = None, projector = None, constraint = None, regularization = None, force_list = False, simplified_sparsity_level = False, **kwargs):
+    def __init__(self, mean=None, cov=None, prec=None, sqrtcov=None, sqrtprec=None, proximal = None, projector = None, constraint = None, regularization = None, force_list = False, **kwargs):
         
         # Store regularization parameters and remove them from kwargs passed to Gaussian
         self.optional_regularization_parameters = {
@@ -79,7 +79,6 @@ class RegularizedGaussian(Distribution):
             "radius" : kwargs.pop("radius", None),
             "strength" : kwargs.pop("strength", 1)
         }
-        self.simplified_sparsity_level = simplified_sparsity_level
         
         self._force_list = force_list
 
