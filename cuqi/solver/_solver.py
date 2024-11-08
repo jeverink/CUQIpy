@@ -671,7 +671,7 @@ class ADMM(object):
     penalty_terms : List of tuples (callable proximal operator of f_i, linear operator L_i)
         Each callable proximal operator f_i accepts two arguments (x, p) and should return the minimizer of p/2||x-z||^2 + f(x) over z for some f.
     x0 : ndarray. Initial guess.
-    penalty_parameter : Trade-off between linear least squares and regularization term in the solver iterates. Denoted as "rho" in [1].
+    penalty_parameter : Trade-off between linear least squares and regularization term in the solver iterates. A larger penalty_parameter gives larger weight to the penalty terms. Denoted as "rho" in [1].
     maxit : The maximum number of iterations.
     adaptive : Whether to adaptively update the penalty_parameter each iteration such that the primal and dual residual norms are of the same order of magnitude. Based on [1], Subsection 3.4.1
     
